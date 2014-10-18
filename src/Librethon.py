@@ -121,8 +121,8 @@ class MainWindow(Gtk.Window):
 			self.__update_labels()
 
 		# Handles anomalous closing of the program
-		#signal.signal(signal.SIGINT, self.__main_window_quit)
-		signal.signal(signal.SIGINT, signal.SIG_DFL)
+		signal.signal(signal.SIGINT, self.__cleanup_quit)
+		#signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 	def __read_data_from_file(self, filename):
 		""" To be called only in the class constructor """
@@ -185,6 +185,10 @@ class MainWindow(Gtk.Window):
 		Gtk.main_quit()
 		return True
 
+	def __cleanup_quit(self, signum, frame):
+		print "Received SIGINT, aborting after saving data..."
+		self.__main_window_quit(self)
+
 	def __on_add_button_clicked(self, button):
 		dialog = AddDialog(self)
 		
@@ -246,7 +250,7 @@ class MainWindow(Gtk.Window):
 		width, height = self.get_size()
 		self.settings["width"] = width
 		self.settings["height"] = height
-		self.__write_settings_to_file(self.settings_file)
+		#self.__write_settings_to_file(self.settings_file)
 
 if __name__ == "__main__":
 	#home = expanduser("~")
