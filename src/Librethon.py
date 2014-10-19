@@ -103,6 +103,11 @@ class MainWindow(Gtk.Window):
 		self.hbox.pack_start(self.add_button, True, False, 3)
 		self.add_button.connect("clicked", self.__on_add_button_clicked)
 
+		# Button to edit an existing mark
+		self.add_button = Gtk.Button(label="Edit")
+		self.hbox.pack_start(self.add_button, True, False, 3)
+		self.add_button.connect("clicked", self.__on_edit_button_clicked)
+
 		# Button to remove mark
 		self.remove_button = Gtk.Button(label="Remove")
 		self.hbox.pack_start(self.remove_button, True, False, 3)
@@ -187,6 +192,7 @@ class MainWindow(Gtk.Window):
 
 	def __cleanup_quit(self, signum, frame):
 		print "Received SIGINT, aborting after saving data..."
+		self.present()
 		self.__main_window_quit(self)
 
 	def __on_add_button_clicked(self, button):
@@ -207,11 +213,43 @@ class MainWindow(Gtk.Window):
 
 		dialog.destroy()
 
-	def __on_remove_button_clicked(self, button):
-		index = 0
+	def __on_edit_button_clicked(self, button):
 		selection = self.view.get_selection()
 		model, store_iter = selection.get_selected()
 
+		# First check if a selection is made
+		if store_iter != None:
+			old_name = self.list_store[store_iter][0]
+			old_credits = self.list_store[store_iter][1]
+			old_mark = self.list_store[store_iter][2]
+			old_date = self.list_store[store_iter][3]
+
+			dialog = AddDialog(self, old_name, old_credits, old_mark, old_date)
+
+			response = dialog.run()
+
+			if response == Gtk.ResponseType.ACCEPT:
+				name = dialog.get_name()
+				credits = dialog.get_credits()
+				mark = dialog.get_mark()
+				date = dialog.get_date()
+
+				if name != "" and credits >= 1 and mark >= 18 and mark <= 30:
+					self.list_store.set_value(store_iter, 0, name)
+					self.list_store.set_value(store_iter, 1, credits)
+					self.list_store.set_value(store_iter, 2, mark)
+					self.list_store.set_value(store_iter, 3, date)
+
+					self.__write_data_to_file(self.data_file)
+					self.__update_labels()
+
+			dialog.destroy()
+
+	def __on_remove_button_clicked(self, button):
+		selection = self.view.get_selection()
+		model, store_iter = selection.get_selected()
+
+		# First check if a selection is made
 		if store_iter != None:
 			self.list_store.remove(store_iter)
 			self.__write_data_to_file(self.data_file)
