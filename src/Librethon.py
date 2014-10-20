@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib
 from os.path import expanduser
 import sys
 import signal
@@ -126,8 +126,9 @@ class MainWindow(Gtk.Window):
 			self.__update_labels()
 
 		# Handles anomalous closing of the program
-		signal.signal(signal.SIGINT, self.__cleanup_quit)
-		#signal.signal(signal.SIGINT, signal.SIG_DFL)
+		# signal.signal(signal.SIGINT, self.__cleanup_quit)
+		# signal.signal(signal.SIGINT, signal.SIG_DFL)
+		self.__init_signal()
 
 	def __read_data_from_file(self, filename):
 		""" To be called only in the class constructor """
@@ -190,8 +191,8 @@ class MainWindow(Gtk.Window):
 		Gtk.main_quit()
 		return True
 
-	def __cleanup_quit(self, signum, frame):
-		print "Received SIGINT, aborting after saving data..."
+	def __cleanup_quit(self):
+		print "Received termination signal, aborting after saving data..."
 		self.present()
 		self.__main_window_quit(self)
 
@@ -289,6 +290,48 @@ class MainWindow(Gtk.Window):
 		self.settings["width"] = width
 		self.settings["height"] = height
 		#self.__write_settings_to_file(self.settings_file)
+
+	# Workaround to correctly set signal handling (thanks to stack overflow user "Ascot")
+	def __init_signal(self):
+	    def signal_action(signal):
+	        if signal is 1:
+	            # print("Caught signal SIGHUP(1)")
+	            pass
+	        elif signal is 2:
+	            # print("Caught signal SIGINT(2)")
+	            pass
+	        elif signal is 15:
+	            # print("Caught signal SIGTERM(15)")
+	            pass
+	        self.__cleanup_quit()
+
+	    def idle_handler(*args):
+	        print("Python signal handler activated.")
+	        GLib.idle_add(signal_action, priority=GLib.PRIORITY_HIGH)
+
+	    def handler(*args):
+	        print("GLib signal handler activated.")
+	        signal_action(args[0])
+
+	    def install_glib_handler(sig):
+	        unix_signal_add = None
+
+	        if hasattr(GLib, "unix_signal_add"):
+	            unix_signal_add = GLib.unix_signal_add
+	        elif hasattr(GLib, "unix_signal_add_full"):
+	            unix_signal_add = GLib.unix_signal_add_full
+
+	        if unix_signal_add:
+	            # print("Register GLib signal handler: %r" % sig)
+	            unix_signal_add(GLib.PRIORITY_HIGH, sig, handler, sig)
+	        else:
+	            print("Can't install GLib signal handler, too old gi.")
+
+	    SIGS = [getattr(signal, s, None) for s in "SIGINT SIGTERM SIGHUP".split()]
+	    for sig in filter(None, SIGS):
+	        # print("Register Python signal handler: %r" % sig)
+	        signal.signal(sig, idle_handler)
+	        GLib.idle_add(install_glib_handler, sig, priority=GLib.PRIORITY_HIGH)
 
 if __name__ == "__main__":
 	#home = expanduser("~")
