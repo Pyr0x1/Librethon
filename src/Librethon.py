@@ -269,7 +269,10 @@ class MainWindow(Gtk.Window):
 			vote_sum += row[1] * row[2]
 			tot_cred += row[1]
 
-		return float(vote_sum) / tot_cred
+		if tot_cred > 0:
+			return float(vote_sum) / tot_cred
+		else:
+			return 0
 
 	def __calc_grad(self, avg):
 		return avg * 110 / 30
