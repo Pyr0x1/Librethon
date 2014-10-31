@@ -61,7 +61,7 @@ class MainWindow(Gtk.Window):
 		self.vbox.pack_start(self.menu_bar, False, False, 3)
 
 		# Scrolled window to host marks
-		self.scroll_window = Gtk.ScrolledWindow.new()
+		self.scroll_window = Gtk.ScrolledWindow.new(None, None)
 		self.vbox.pack_start(self.scroll_window, True, True, 0)
 
 		# Model storing data
@@ -273,6 +273,37 @@ class MainWindow(Gtk.Window):
 
 	def __calc_grad(self, avg):
 		return avg * 110 / 30
+
+	def __calc_purified_avg(self, num_cred):
+		tot_cred = 0
+
+		for row in self.list_store:
+			tot_cred += row[1]
+
+		if num_cred < tot_cred:
+			cred_list = []
+
+			# Create a list where each element is the value of a credit
+			for row in self.list_store:
+				for elem in range(row[2]):
+					cred_list.append(row[1])
+
+			cred_list.sort() # Sorts list so worst credits are first
+
+			for elem in range(num_cred): # Removes first n credits (worst ones)
+				cred_list.pop(0)
+
+			# Compute purified average
+			vote_sum = 0
+			for elem in cred_list:
+				vote_sum += elem
+
+			tot_cred -= num_cred
+
+			return float(vote_sum) / tot_cred
+
+		else:
+			return 0 # Not enough credits to compute purified average
 
 	def __update_labels(self):
 		# Calculate average to display once all data is loaded
